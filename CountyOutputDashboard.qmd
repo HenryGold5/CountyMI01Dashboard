@@ -65,6 +65,37 @@ county_fips <- data.frame(
   fips = c(1,3,7,9,11,13,17,19,29,31,33,35,39,41,43,47,55,51,53,61,63,69,71,79,83,85,89,95,97,101,103,105,109,113,119,
            129,131,133,135,137,141,143,153,165)
 )
+
+# Calculate global limits for consistent color scales across counties
+# Education data limits
+edu_prcntFd_limits <- range(educationData_all$prcntFd, na.rm = TRUE)
+edu_pWFU18B_limits <- range(educationData_all$pWFU18B, na.rm = TRUE)
+edu_enrollment_limits <- range(educationData_all$Enrllmn, na.rm = TRUE)
+
+# Voting data limits - calculate from the precincts data
+presincts_with_calcs <- presincts %>%
+  dplyr::mutate(
+    Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+    Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+    Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
+    Harris2024Percent = (Harris2024/TotalPres2024)*100,
+    Lorinser22Percent = (Lorinser22/(Lorinser22 + Bergman22 + Gale22 + Hakola22))*100,
+    BarrBergmanDiff = Barr2024Percent - Bergman2024Percent,
+    BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
+    BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
+    BarrLorinserDiff = Barr2024Percent - Lorinser22Percent
+  )
+
+voting_barr_bergman_limits <- range(presincts_with_calcs$BarrBergmanDiff, na.rm = TRUE)
+voting_barr_slotkin_limits <- range(presincts_with_calcs$BarrSlotkinDiff, na.rm = TRUE)
+voting_barr_harris_limits <- range(presincts_with_calcs$BarrHarrisDiff, na.rm = TRUE)
+voting_barr_lorinser_limits <- range(presincts_with_calcs$BarrLorinserDiff, na.rm = TRUE)
+
+# Make symmetric around 0 for voting maps
+voting_barr_bergman_limit <- max(abs(voting_barr_bergman_limits))
+voting_barr_slotkin_limit <- max(abs(voting_barr_slotkin_limits))
+voting_barr_harris_limit <- max(abs(voting_barr_harris_limits))
+voting_barr_lorinser_limit <- max(abs(voting_barr_lorinser_limits))
 ```
 
 # {.sidebar}
@@ -235,6 +266,7 @@ output$map_barr_bergman <- renderTmap({
       midpoint = 0,
       style = "cont",
       title = "",
+      breaks = seq(-voting_barr_bergman_limit, voting_barr_bergman_limit, length.out = 11),
       id = "Precinct_S",
       popup.vars = c(
         "Barr: " = "Barr2024Percent",
@@ -295,6 +327,7 @@ output$map_barr_slotkin <- renderTmap({
       midpoint = 0,
       style = "cont",
       title = "",
+      breaks = seq(-voting_barr_slotkin_limit, voting_barr_slotkin_limit, length.out = 11),
       id = "Precinct_S",
       popup.vars = c(
         "Barr: " = "Barr2024Percent",
@@ -355,6 +388,7 @@ output$map_barr_harris <- renderTmap({
       midpoint = 0,
       style = "cont",
       title = "",
+      breaks = seq(-voting_barr_harris_limit, voting_barr_harris_limit, length.out = 11),
       id = "Precinct_S",
       popup.vars = c(
         "Barr: " = "Barr2024Percent",
@@ -415,6 +449,7 @@ output$map_barr_lorinser <- renderTmap({
       midpoint = 0,
       style = "cont",
       title = "",
+      breaks = seq(-voting_barr_lorinser_limit, voting_barr_lorinser_limit, length.out = 11),
       id = "Label",
       popup.vars = c(
         "Barr: " = "Barr2024Percent",
@@ -477,6 +512,7 @@ output$map_cartogram <- renderTmap({
       midpoint = 0,
       style = "cont",
       title = "",
+      breaks = seq(-voting_barr_bergman_limit, voting_barr_bergman_limit, length.out = 11),
       id = "Precinct_S",
       popup.vars = c(
         "Barr: " = "Barr2024Percent",
@@ -487,6 +523,132 @@ output$map_cartogram <- renderTmap({
         Barr2024Percent = list(digits = 0, suffix = "%"),
         Bergman2024Percent = list(digits = 0, suffix = "%"),
         BarrBergmanDiffLabel = list(digits = 0)
+      )
+    ) +
+    tmap::tm_layout(bg.color = "white")
+})
+```
+
+### Cartogram: Barr vs Slotkin
+
+```{r}
+tmapOutput("map_cartogram_slotkin")
+```
+
+```{r}
+#| context: server
+output$map_cartogram_slotkin <- renderTmap({
+  req(input$county)
+
+  county <- input$county
+  countyFIPS <- county_fips$fips[county_fips$county == county]
+  counties <- counties_all %>% dplyr::filter(Name == county)
+
+  presincts_filtered <- if(county != "Wexford") {
+    sf::st_intersection(presincts, counties) %>%
+      sf::st_make_valid() %>%
+      sf::st_cast("MULTIPOLYGON")
+  } else {
+    sf::st_crop(presincts, counties)
+  }
+
+  presinctsCartogram <- presincts_filtered %>%
+    dplyr::filter(COUNTYFIPS == countyFIPS) %>%
+    dplyr::mutate(
+      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+      Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
+      BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
+      BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
+                                     paste0("+", round(BarrSlotkinDiff, 0)),
+                                     as.character(round(BarrSlotkinDiff, 0)))
+    )
+
+  presinctsCartogram <- st_transform(presinctsCartogram, 3857)
+  presinctsCartogram <- st_make_valid(presinctsCartogram)
+  presinctsCartogram <- suppressMessages(cartogram_cont(presinctsCartogram, "Active_Vot", prepare = "remove"))
+  presinctsCartogram <- st_make_valid(presinctsCartogram)
+
+  tmap::tm_shape(presinctsCartogram) +
+    tmap::tm_polygons(
+      col = "BarrSlotkinDiff",
+      palette = "PRGn",
+      midpoint = 0,
+      style = "cont",
+      title = "",
+      breaks = seq(-voting_barr_slotkin_limit, voting_barr_slotkin_limit, length.out = 11),
+      id = "Precinct_S",
+      popup.vars = c(
+        "Barr: " = "Barr2024Percent",
+        "Slotkin: " = "Slotkin2024Percent",
+        "Difference: " = "BarrSlotkinDiffLabel"
+      ),
+      popup.format = list(
+        Barr2024Percent = list(digits = 0, suffix = "%"),
+        Slotkin2024Percent = list(digits = 0, suffix = "%"),
+        BarrSlotkinDiffLabel = list(digits = 0)
+      )
+    ) +
+    tmap::tm_layout(bg.color = "white")
+})
+```
+
+### Cartogram: Barr vs Harris
+
+```{r}
+tmapOutput("map_cartogram_harris")
+```
+
+```{r}
+#| context: server
+output$map_cartogram_harris <- renderTmap({
+  req(input$county)
+
+  county <- input$county
+  countyFIPS <- county_fips$fips[county_fips$county == county]
+  counties <- counties_all %>% dplyr::filter(Name == county)
+
+  presincts_filtered <- if(county != "Wexford") {
+    sf::st_intersection(presincts, counties) %>%
+      sf::st_make_valid() %>%
+      sf::st_cast("MULTIPOLYGON")
+  } else {
+    sf::st_crop(presincts, counties)
+  }
+
+  presinctsCartogram <- presincts_filtered %>%
+    dplyr::filter(COUNTYFIPS == countyFIPS) %>%
+    dplyr::mutate(
+      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+      Harris2024Percent = (Harris2024/TotalPres2024)*100,
+      BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
+      BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
+                                     paste0("+", round(BarrHarrisDiff, 0)),
+                                     as.character(round(BarrHarrisDiff, 0)))
+    )
+
+  presinctsCartogram <- st_transform(presinctsCartogram, 3857)
+  presinctsCartogram <- st_make_valid(presinctsCartogram)
+  presinctsCartogram <- suppressMessages(cartogram_cont(presinctsCartogram, "Active_Vot", prepare = "remove"))
+  presinctsCartogram <- st_make_valid(presinctsCartogram)
+
+  tmap::tm_shape(presinctsCartogram) +
+    tmap::tm_polygons(
+      col = "BarrHarrisDiff",
+      palette = "PRGn",
+      midpoint = 0,
+      style = "cont",
+      title = "",
+      breaks = seq(-voting_barr_harris_limit, voting_barr_harris_limit, length.out = 11),
+      id = "Precinct_S",
+      popup.vars = c(
+        "Barr: " = "Barr2024Percent",
+        "Harris: " = "Harris2024Percent",
+        "Difference: " = "BarrHarrisDiffLabel"
+      ),
+      popup.format = list(
+        Barr2024Percent = list(digits = 0, suffix = "%"),
+        Harris2024Percent = list(digits = 0, suffix = "%"),
+        BarrHarrisDiffLabel = list(digits = 0)
       )
     ) +
     tmap::tm_layout(bg.color = "white")
@@ -523,10 +685,11 @@ output$map_edu_federal <- renderTmap({
 
   tmap::tm_shape(educationData) +
     tmap::tm_polygons(
-      col = "prcntFdLabel",
+      col = "prcntFd",
       palette = "PRGn",
-      style = "cat",
+      style = "cont",
       title = "",
+      breaks = seq(edu_prcntFd_limits[1], edu_prcntFd_limits[2], length.out = 11),
       id = "Name",
       colorNA = "grey",
       textNA = "No data",
@@ -568,6 +731,7 @@ output$map_edu_enrollment <- renderTmap({
       palette = "PRGn",
       style = "cont",
       title = "",
+      breaks = seq(edu_enrollment_limits[1], edu_enrollment_limits[2], length.out = 11),
       id = "Name",
       colorNA = "grey",
       textNA = "No data",
@@ -612,10 +776,11 @@ output$map_edu_poverty <- renderTmap({
 
   tmap::tm_shape(educationData) +
     tmap::tm_polygons(
-      col = "pWFU18BLabel",
+      col = "pWFU18B",
       palette = "PRGn",
-      style = "cat",
+      style = "cont",
       title = "",
+      breaks = seq(edu_pWFU18B_limits[1], edu_pWFU18B_limits[2], length.out = 11),
       id = "Name",
       colorNA = "grey",
       textNA = "No data",
