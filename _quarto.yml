@@ -1,6 +1,10 @@
 project:
   type: website
   output-dir: _site
+  render:
+    - "*.qmd"
+    - "!CountyOutputDashboard.qmd"
+    - "!countySummary.qmd"
 
 website:
   title: "District 1 Dashboards"
@@ -10,8 +14,6 @@ website:
     left:
       - text: "Home"
         href: index.qmd
-      - text: "County Dashboard"
-        href: CountyOutputDashboard.qmd
 
 format:
   html:
