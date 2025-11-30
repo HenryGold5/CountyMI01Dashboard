@@ -103,9 +103,13 @@ output$county_map <- renderPlot({
   
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  
+
   counties <- counties_all %>% dplyr::filter(Name == county)
-  metro_filtered <- sf::st_intersection(metro, counties)
+  metro_filtered <- tryCatch({
+    result <- suppressMessages(sf::st_intersection(metro, counties))
+    if(nrow(result) == 0) NULL else result
+  }, error = function(e) NULL)
+
   presincts_filtered <- if(county != "Wexford") {
     sf::st_intersection(presincts, counties) %>%
       sf::st_make_valid() %>%
@@ -113,13 +117,19 @@ output$county_map <- renderPlot({
   } else {
     sf::st_crop(presincts, counties)
   }
-  
+
   counties <- st_make_valid(counties)
-  
+
   mapcounty <- tmap::tm_shape(counties) +
-    tmap::tm_polygons(col = "#EDEDED") +
-    tmap::tm_shape(metro_filtered) +
-    tmap::tm_polygons(col = "#C9C9C9", border.col = "#C9C9C9") +
+    tmap::tm_polygons(col = "#EDEDED")
+
+  if(!is.null(metro_filtered) && nrow(metro_filtered) > 0) {
+    mapcounty <- mapcounty +
+      tmap::tm_shape(metro_filtered) +
+      tmap::tm_polygons(col = "#C9C9C9", border.col = "#C9C9C9")
+  }
+
+  mapcounty <- mapcounty +
     tmap::tm_shape(presincts_filtered) +
     tmap::tm_borders(col = "darkgrey") +
     tmap::tm_layout(frame = FALSE, outer.margins = c(0, 0, 0.35, 0))
@@ -244,7 +254,12 @@ output$map_barr_bergman <- renderTmap({
 ### Barr vs Slotkin 2024
 
 ```{r}
-renderTmap({
+tmapOutput("map_barr_slotkin")
+```
+
+```{r}
+#| context: server
+output$map_barr_slotkin <- renderTmap({
   req(input$county)
   
   county <- input$county
@@ -299,7 +314,12 @@ renderTmap({
 ### Barr vs Harris 2024
 
 ```{r}
-renderTmap({
+tmapOutput("map_barr_harris")
+```
+
+```{r}
+#| context: server
+output$map_barr_harris <- renderTmap({
   req(input$county)
 
   county <- input$county
@@ -354,7 +374,12 @@ renderTmap({
 ### Barr 2024 vs Lorinser 2022
 
 ```{r}
-renderTmap({
+tmapOutput("map_barr_lorinser")
+```
+
+```{r}
+#| context: server
+output$map_barr_lorinser <- renderTmap({
   req(input$county)
 
   county <- input$county
@@ -409,7 +434,12 @@ renderTmap({
 ### Cartogram: Barr vs Bergman
 
 ```{r}
-renderTmap({
+tmapOutput("map_cartogram")
+```
+
+```{r}
+#| context: server
+output$map_cartogram <- renderTmap({
   req(input$county)
 
   county <- input$county
@@ -470,7 +500,12 @@ renderTmap({
 ### Federal Funding Percent
 
 ```{r}
-renderTmap({
+tmapOutput("map_edu_federal")
+```
+
+```{r}
+#| context: server
+output$map_edu_federal <- renderTmap({
   req(input$county)
 
   county <- input$county
@@ -513,7 +548,12 @@ renderTmap({
 ### Total Enrollment
 
 ```{r}
-renderTmap({
+tmapOutput("map_edu_enrollment")
+```
+
+```{r}
+#| context: server
+output$map_edu_enrollment <- renderTmap({
   req(input$county)
 
   county <- input$county
@@ -549,7 +589,12 @@ renderTmap({
 ### Families Below Poverty
 
 ```{r}
-renderTmap({
+tmapOutput("map_edu_poverty")
+```
+
+```{r}
+#| context: server
+output$map_edu_poverty <- renderTmap({
   req(input$county)
 
   county <- input$county
