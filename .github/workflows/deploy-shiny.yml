@@ -49,7 +49,7 @@ jobs:
         run: |
           install.packages(c("rsconnect", "dplyr", "tmap", "sf", "cartogram", "gt",
                            "gtExtras", "stringr", "ggplot2", "scales", "shiny",
-                           "shinymanager", "bslib", "tidyr", "readxl", "quarto"))
+                           "bslib", "tidyr", "readxl", "quarto"))
         shell: Rscript {0}
 
       - name: Configure rsconnect
@@ -62,8 +62,21 @@ jobs:
           )
           "
 
-      - name: Deploy to shinyapps.io with Quarto
+      - name: Create app.R wrapper for deployment
         run: |
-          quarto publish shinyapps CountyOutputDashboard.qmd \
-            --no-prompt \
-            --no-browser
+          cat > app.R << 'EOF'
+          library(quarto)
+          quarto_serve("CountyOutputDashboard.qmd")
+          EOF
+
+      - name: Deploy to shinyapps.io
+        run: |
+          Rscript -e "
+          rsconnect::deployApp(
+            appDir = '.',
+            appFiles = c('app.R', 'CountyOutputDashboard.qmd', 'data'),
+            appName = 'district1-county-dashboard',
+            account = 'henrygold5',
+            forceUpdate = TRUE
+          )
+          "

@@ -5,10 +5,6 @@ format:
     theme: journal
     orientation: rows
 server: shiny
-server-ui-wrapper: |
-  function(ui) {
-    shinymanager::secure_app(ui, enable_admin = FALSE)
-  }
 editor: visual
 execute:
   echo: false
@@ -30,19 +26,10 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(scales)
   library(shiny)
-  library(shinymanager)
   library(bslib)
   library(tidyr)
   library(readxl)
 })
-
-# Define credentials for password protection
-credentials <- data.frame(
-  user = c("admin"),
-  password = c("district1"), # Change this password!
-  admin = c(TRUE),
-  stringsAsFactors = FALSE
-)
 
 # Suppress all sf messages
 sf::sf_use_s2(FALSE)
@@ -109,14 +96,6 @@ voting_barr_bergman_limit <- max(abs(voting_barr_bergman_limits))
 voting_barr_slotkin_limit <- max(abs(voting_barr_slotkin_limits))
 voting_barr_harris_limit <- max(abs(voting_barr_harris_limits))
 voting_barr_lorinser_limit <- max(abs(voting_barr_lorinser_limits))
-```
-
-```{r}
-#| context: server-start
-# Add authentication check at server start
-res_auth <- shinymanager::secure_server(
-  check_credentials = shinymanager::check_credentials(credentials)
-)
 ```
 
 # {.sidebar}

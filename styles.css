@@ -5,13 +5,19 @@ body {
 }
 
 .card {
+  border: 1px solid #e3e3e3;
   border-radius: 8px;
   transition: transform 0.2s, box-shadow 0.2s;
+  background-color: #ffffff;
 }
 
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.shadow-sm {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
 }
 
 .btn-primary {
@@ -25,6 +31,11 @@ body {
   border-color: #0056b3;
 }
 
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
 h1 {
   color: #2c3e50;
   font-weight: 700;
@@ -32,4 +43,13 @@ h1 {
 
 .text-muted {
   color: #6c757d !important;
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.text-center {
+  text-align: center;
 }
