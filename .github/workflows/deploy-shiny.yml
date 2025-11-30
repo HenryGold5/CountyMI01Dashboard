@@ -40,11 +40,30 @@ jobs:
             libproj-dev \
             libudunits2-dev
 
-      - name: Deploy to shinyapps.io
-        uses: qwert666/shinyapps-actions@main
-        env:
-          SHINY_USERNAME: 'henrygold5'
-          SHINY_TOKEN: ${{ secrets.TOKEN }}
-          SHINY_SECRET: ${{ secrets.SECRET }}
-          APP_NAME: 'CountyMI01Dashboard'
-          APP_DIR: ''
+      - name: Install Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.4.549
+
+      - name: Install R dependencies
+        run: |
+          install.packages(c("rsconnect", "dplyr", "tmap", "sf", "cartogram", "gt",
+                           "gtExtras", "stringr", "ggplot2", "scales", "shiny",
+                           "shinymanager", "bslib", "tidyr", "readxl", "quarto"))
+        shell: Rscript {0}
+
+      - name: Configure rsconnect
+        run: |
+          Rscript -e "
+          rsconnect::setAccountInfo(
+            name = 'henrygold5',
+            token = '${{ secrets.TOKEN }}',
+            secret = '${{ secrets.SECRET }}'
+          )
+          "
+
+      - name: Deploy to shinyapps.io with Quarto
+        run: |
+          quarto publish shinyapps CountyOutputDashboard.qmd \
+            --no-prompt \
+            --no-browser
