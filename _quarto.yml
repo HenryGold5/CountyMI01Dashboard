@@ -1,0 +1,20 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "District 1 Dashboards"
+  navbar:
+    background: primary
+    search: false
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "County Dashboard"
+        href: CountyOutputDashboard.qmd
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: false
