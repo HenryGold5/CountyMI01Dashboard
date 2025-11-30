@@ -3,97 +3,45 @@ title: "District 1 Dashboards"
 format:
   html:
     page-layout: full
-server: shiny
 ---
 
-```{r}
-#| context: setup
-#| include: false
-library(shiny)
-library(shinymanager)
-library(bslib)
+<div class="container" style="margin-top: 50px;">
 
-# Define credentials for password protection
-credentials <- data.frame(
-  user = c("admin"),
-  password = c("district1"), # Change this password!
-  admin = c(TRUE),
-  stringsAsFactors = FALSE
-)
-```
+  <h1 class="text-center mb-5">District 1 Dashboards</h1>
 
-```{r}
-#| panel: fill
+  <div class="row justify-content-center">
 
-# Wrap the UI with secure_app
-ui <- page_fluid(
-  # Add authentication module
-  auth_ui(id = "auth"),
+  <!-- County Dashboard Card -->
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body text-center">
+        <h3 class="card-title">County Analysis Dashboard</h3>
+        <p class="card-text">Comprehensive analysis of District 1 counties including demographics, voting patterns, and economic indicators.</p>
+        <p class="card-text"><small class="text-muted">Interactive Shiny Dashboard - Deploy separately or run locally</small></p>
+        <code style="font-size: 0.8em; display: block; margin-top: 10px; text-align: left;">
+          # To run locally:<br>
+          quarto serve CountyOutputDashboard.qmd
+        </code>
+      </div>
+    </div>
+  </div>
 
-  div(
-    class = "container",
-    style = "margin-top: 50px;",
+  <!-- Placeholder for future dashboard -->
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div class="card h-100 shadow-sm" style="opacity: 0.6;">
+      <div class="card-body text-center">
+        <h3 class="card-title text-muted">Future Dashboard</h3>
+        <p class="card-text text-muted">Additional dashboards will be added here.</p>
+        <button class="btn btn-secondary btn-lg" disabled>Coming Soon</button>
+      </div>
+    </div>
+  </div>
 
-    h1("District 1 Dashboards", class = "text-center mb-5"),
+  </div>
 
-    div(
-      class = "row justify-content-center",
+  <!-- Footer -->
+  <div class="text-center mt-5 text-muted">
+    <p>District 1 Analysis System</p>
+  </div>
 
-      # County Dashboard Card
-      div(
-        class = "col-md-6 col-lg-4 mb-4",
-        div(
-          class = "card h-100 shadow-sm",
-          div(
-            class = "card-body text-center",
-            h3("County Analysis Dashboard", class = "card-title"),
-            p("Comprehensive analysis of District 1 counties including demographics, voting patterns, and economic indicators.", class = "card-text"),
-            tags$a(
-              href = "CountyOutputDashboard.qmd",
-              class = "btn btn-primary btn-lg",
-              "View Dashboard"
-            )
-          )
-        )
-      ),
-
-      # Placeholder for future dashboard
-      div(
-        class = "col-md-6 col-lg-4 mb-4",
-        div(
-          class = "card h-100 shadow-sm",
-          style = "opacity: 0.6;",
-          div(
-            class = "card-body text-center",
-            h3("Future Dashboard", class = "card-title text-muted"),
-            p("Additional dashboards will be added here.", class = "card-text text-muted"),
-            tags$button(
-              class = "btn btn-secondary btn-lg",
-              disabled = "disabled",
-              "Coming Soon"
-            )
-          )
-        )
-      )
-    ),
-
-    # Footer
-    div(
-      class = "text-center mt-5 text-muted",
-      p("District 1 Analysis System")
-    )
-  )
-)
-
-# Call the authentication server
-server <- function(input, output, session) {
-  # Authentication
-  res_auth <- callModule(
-    module = auth_server,
-    id = "auth",
-    check_credentials = check_credentials(credentials)
-  )
-}
-
-shinyApp(ui, server)
-```
+</div>

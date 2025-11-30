@@ -1,30 +1,53 @@
 # District 1 Dashboards
 
-Password-protected website featuring interactive dashboards for Michigan District 01 analysis.
+Interactive dashboards for Michigan District 01 analysis.
+
+## Project Structure
+
+This project contains two components:
+
+1. **Static Website** (`index.qmd`) - A landing page that can be deployed to GitHub Pages
+2. **Shiny Dashboard** (`CountyOutputDashboard.qmd`) - An interactive Shiny app for county analysis
 
 ## Features
 
-- 🔐 Password-protected access
-- 📊 Interactive Shiny dashboards
+- 📊 Interactive Shiny dashboard with county-level data
 - 🗺️ County-level analysis with maps and visualizations
-- 🚀 Automated deployment via GitHub Actions
+- 📈 Demographics, voting patterns, and economic indicators
+- 🚀 Static website deployment via GitHub Actions
 
-## Quick Start
+## Running Locally
 
-1. **Change the default password** (see SETUP.md)
-2. Push to the `main` branch
-3. GitHub Actions will automatically deploy to GitHub Pages
+### Static Website
+```bash
+quarto render
+# Output will be in _site/
+```
 
-## Documentation
+### Shiny Dashboard
+```bash
+# Run the interactive dashboard locally
+quarto serve CountyOutputDashboard.qmd
+```
 
-See [SETUP.md](SETUP.md) for detailed setup and deployment instructions.
+## Deployment
 
-## Default Credentials (CHANGE THESE!)
+### Static Website
+The static website (landing page) can be deployed to GitHub Pages via GitHub Actions.
 
-- Username: `admin`
-- Password: `district1`
+### Shiny Dashboard
+The Shiny dashboard requires a server to run and cannot be deployed as static content. Options:
+- **shinyapps.io**: Deploy to Posit's cloud service
+- **Shiny Server**: Self-hosted server
+- **Posit Connect**: Enterprise deployment
+
+To deploy to shinyapps.io:
+```r
+library(rsconnect)
+rsconnect::deployApp(appFiles = "CountyOutputDashboard.qmd")
+```
 
 ## Live Site
 
-Once deployed, your site will be available at:
+Once deployed, the static landing page will be available at:
 `https://<your-username>.github.io/<repository-name>/` 
