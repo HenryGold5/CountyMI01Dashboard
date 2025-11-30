@@ -1,0 +1,780 @@
+---
+title: "County Outline"
+format:
+  html:
+    theme: journal
+editor: visual
+execute:
+  echo: false
+  warning: false
+  
+---
+# Overview
+
+```{r, echo=FALSE, message=FALSE, output =FALSE}
+library(dplyr)
+library(tmap)
+library(sf)
+library(cartogram)
+library(gt)
+library(gtExtras)
+library(stringr)
+library(ggplot2)
+library(scales)
+
+sf::st_read("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1PresinctsWithVoting/district1Presincts.gpkg") -> presincts
+sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Overall/district1Overall.shp") -> overall
+sf::st_transform(overall,st_crs(presincts)) -> overall
+sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Metro/district1Metro.shp") -> metro
+sf::st_transform(metro,sf::st_crs(presincts)) -> metro
+sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Counties/district1Counties.shp") -> counties
+sf::st_transform(counties, sf::st_crs(presincts)) -> counties
+
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/VotingInDistrict1/votingResultsCountyWide.xlsx") -> countyVotingResults
+read.csv("~/Desktop/CallieBarrCampaignWork/VotingInDistrict1/voterTurnout2024.csv") -> voterTurnout
+
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/VeteransAssociation/spendDataVA.xlsx") -> vaSpend
+
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/numEmployeesCounty.xlsx") -> numEmployees
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/numEstablishmentsCounty.xlsx") -> numEstablishments
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/payRollCounty.xlsx") -> payRoll
+
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 1) -> ageSex
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 2) -> bachelorType
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 3) -> educationAttainment
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 4) -> householdIncome
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 5) -> medianIncome
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 6) -> hispanicLatino
+readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 7) -> race
+
+sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/educationDataset.shp") -> educationData
+
+county <- "Grand Traverse"
+countyFIPS <- 55
+
+counties %>% 
+  dplyr::filter(Name == county) -> counties
+
+metro <- sf::st_intersection(metro,counties)
+
+
+# educationData <- sf::st_intersection(educationData,counties)
+educationData <- sf::st_crop(educationData,counties)
+educationData <- sf::st_make_valid(educationData)
+
+if(county != "Wexford") {
+  presincts <- sf::st_intersection(presincts,counties)
+  presincts <- sf::st_make_valid(presincts)
+  presincts <- sf::st_cast(presincts,"MULTIPOLYGON")
+} else {
+  presincts <- sf::st_crop(presincts,counties)
+}
+
+countyVotingResults %>% 
+  dplyr::filter(CountyName == county) -> countyVotingResults
+
+voterTurnout %>% 
+  dplyr::filter(stringr::str_detect(countyName, stringr::regex(county, ignore_case = TRUE))) -> voterTurnout
+
+vaSpend <- vaSpend %>% dplyr::filter(County == county)
+
+totalVoters2024 <- voterTurnout$voters2024[[1]]
+
+numEmployees %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> numEmployees
+
+numEstablishments %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> numEstablishments
+
+payRoll %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> payRoll
+
+ageSex %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> ageSex
+
+bachelorType %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> bachelorType
+
+educationAttainment %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> educationAttainment
+
+householdIncome %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> householdIncome
+
+medianIncome %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> medianIncome
+
+hispanicLatino %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> hispanicLatino
+
+race %>% 
+  dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>% 
+  dplyr::filter(CountyCode == countyFIPS | CountyCode == "999") -> race
+```
+
+```{r}
+tmap::tm_shape(counties) +
+  tmap::tm_polygons(col = "#EDEDED") +
+  tmap::tm_shape(metro) +
+  tmap::tm_polygons(col = "#C9C9C9",
+                    border.col = "#C9C9C9") +
+  tmap::tm_shape(presincts) +
+  tmap::tm_borders(col = "darkgrey") +
+  tmap::tm_layout(
+    frame = FALSE,
+    outer.margins = c(0, 0, 0.35, 0)  # Top margin = 20% of plot area
+  )-> mapcounty
+  
+tmap::tm_shape(overall) +
+  tmap::tm_polygons(col = "#DBDBDB",
+                    border.col = "#DBDBDB") +
+  tmap::tm_shape(counties) +
+  tmap::tm_polygons(col="darkgrey",
+                    border.col = "black") -> mapOverall
+
+mapcounty
+print(mapOverall, vp = grid::viewport(0.35,0.82,width = 0.2,height = 0.45))
+```
+
+```{r}
+data_range <- countyVotingResults %>% 
+  select(where(is.numeric)) %>% 
+  range(na.rm = TRUE)
+max_abs <- max(abs(data_range))
+
+countyVotingResults %>%
+  dplyr::select(-CountyName) %>%
+  gt(rowname_col = "office") %>%
+  fmt_number(
+    columns = c(2, 3, 4, 5, 6, 7),
+    decimals = 0,
+    pattern = "{x}"
+  ) %>%
+
+  sub_missing(missing_text = "") %>%
+  text_transform(
+    locations = cells_body(columns = c(2, 3, 4, 5, 6, 7)),
+    fn = function(x) {
+      num <- suppressWarnings(as.numeric(x))
+      ifelse(!is.na(num) & num > 0, paste0("+", x), x)
+    }
+  ) %>%
+  gt_color_rows(
+    columns = where(is.numeric),
+    palette = c("#E81B23", "#f7f7f7", "#1d58ba"),
+    domain = c(-max_abs, max_abs)
+  )%>% 
+  gt_theme_538()
+```
+
+# Previous Races: Presincts
+
+::: {.panel-tabset}
+
+## 2024:Barr Bergman
+
+```{r}
+presincts %>% 
+  dplyr::mutate(Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+                Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+                Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
+                Harris2024Percent = (Harris2024/TotalPres2024)*100,
+                Lorinser22Percent = (Lorinser22/(Lorinser22 + Bergman22 + Gale22 + Hakola22))*100,
+                Whitmer22Percent = (Whitmer22/(Whitmer22 + Dixon22 + Buzuma22+Brandenburg22+Hogan22+Simpson22))*100) %>% 
+  dplyr::mutate(BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
+                BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
+                BarrLorinserDiff = Barr2024Percent - Lorinser22Percent,
+                BarrBergmanDiff = (Barr2024Percent - Bergman2024Percent)) %>% 
+  dplyr::mutate(BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
+                                         paste0("+", round(BarrSlotkinDiff, 0)),
+                                         as.character(round(BarrSlotkinDiff,0))),
+                BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
+                                         paste0("+", round(BarrHarrisDiff, 0)),
+                                         as.character(round(BarrHarrisDiff,0))),
+                BarrLorinserDiffLabel = ifelse(BarrLorinserDiff >= 0,
+                                         paste0("+", round(BarrLorinserDiff, 0)),
+                                         as.character(round(BarrLorinserDiff,0))),
+                BarrBergmanDiffLabel = ifelse(BarrBergmanDiff >= 0,
+                                         paste0("+", round(BarrBergmanDiff, 0)),
+                                         as.character(round(BarrBergmanDiff,0))),
+                )-> presinctsMapData
+
+presinctsMapData <- st_make_valid(presinctsMapData)
+counties <- st_make_valid(counties)
+
+tmap_options(projection = st_crs(presinctsMapData)$epsg)
+
+tmap::tm_shape(counties) +
+  tmap::tm_borders(col = "black") +
+  tmap::tm_shape(presinctsMapData) +
+  tmap::tm_polygons(
+    col = "BarrBergmanDiff",
+    palette = "RdBu",
+    midpoint = 0,
+    style = "cont",
+    title = "",
+    id = "Precinct_S",
+    popup.vars = c(
+      "Barr: " = "Barr2024Percent",
+      "Bergman: " = "Bergman2024Percent",
+      "Difference: " = "BarrBergmanDiffLabel"
+    ),
+    popup.format = list(
+      Barr2024Percent = list(digits = 0, suffix = "%"),  # Barr
+      Bergman2024Percent = list(digits = 0, suffix = "%"),  # Bergman
+      BarrBergmanDiffLabel = list(digits = 0)                 # Difference (no %)
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = FALSE)
+```
+
+## Cartogram: Barr Bergman
+
+```{r}
+presincts %>% 
+  dplyr::filter(COUNTYFIPS == countyFIPS)%>% 
+  dplyr::mutate(Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+                Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+                Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
+                Harris2024Percent = (Harris2024/TotalPres2024)*100,
+                Lorinser22Percent = (Lorinser22/(Lorinser22 + Bergman22 + Gale22 + Hakola22))*100,
+                Whitmer22Percent = (Whitmer22/(Whitmer22 + Dixon22 + Buzuma22+Brandenburg22+Hogan22+Simpson22))*100) %>% 
+  dplyr::mutate(BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
+                BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
+                BarrLorinserDiff = Barr2024Percent - Lorinser22Percent,
+                BarrBergmanDiff = (Barr2024Percent - Bergman2024Percent)) %>% 
+  dplyr::mutate(BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
+                                         paste0("+", round(BarrSlotkinDiff, 0)),
+                                         as.character(round(BarrSlotkinDiff,0))),
+                BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
+                                         paste0("+", round(BarrHarrisDiff, 0)),
+                                         as.character(round(BarrHarrisDiff,0))),
+                BarrLorinserDiffLabel = ifelse(BarrLorinserDiff >= 0,
+                                         paste0("+", round(BarrLorinserDiff, 0)),
+                                         as.character(round(BarrLorinserDiff,0))),
+                BarrBergmanDiffLabel = ifelse(BarrBergmanDiff >= 0,
+                                         paste0("+", round(BarrBergmanDiff, 0)),
+                                         as.character(round(BarrBergmanDiff,0))),
+                ) -> presinctsCartogram
+
+presinctsCartogram <- st_transform(presinctsCartogram, 3857)
+presinctsCartogram <- st_make_valid(presinctsCartogram)
+
+cartogram_cont(presinctsCartogram, "Active_Vot", prepare = "remove") -> presinctsCartogram
+
+presinctsCartogram <- st_make_valid(presinctsCartogram)
+
+tmap::tm_shape(presinctsCartogram) +
+  tmap::tm_polygons(
+    col = "BarrBergmanDiff",
+    palette = "RdBu",
+    midpoint = 0,
+    style = "cont",
+    title = "",
+    id = "Precinct_S",
+    popup.vars = c(
+      "Barr: " = "Barr2024Percent",
+      "Bergman: " = "Bergman2024Percent",
+      "Difference: " = "BarrBergmanDiffLabel"
+    ),
+    popup.format = list(
+      Barr2024Percent = list(digits = 0, suffix = "%"),  # Barr
+      Bergman2024Percent = list(digits = 0, suffix = "%"),  # Bergman
+      BarrBergmanDiffLabel = list(digits = 0)                 # Difference (no %)
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = TRUE)
+```
+## 2024:Barr Slotkin
+
+```{r}
+tmap::tm_shape(counties) +
+  tmap::tm_borders(col = "black") +
+  tmap::tm_shape(presinctsMapData) +
+  tmap::tm_polygons(
+    col = "BarrSlotkinDiff",
+    palette = "PRGn",
+    midpoint = 0,
+    style = "cont",
+    title = "",
+    id = "Precinct_S",
+    popup.vars = c(
+      "Barr: " = "Barr2024Percent",
+      "Slotkin: " = "Slotkin2024Percent",
+      "Difference: " = "BarrSlotkinDiffLabel"
+    ),
+    popup.format = list(
+      Barr2024Percent = list(digits = 0, suffix = "%"),  # Barr
+      Slotkin2024Percent = list(digits = 0, suffix = "%"),  # Bergman
+      BarrSlotkinDiffLabel = list(digits = 0)                 # Difference (no %)
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = FALSE)
+```
+
+## 2024: Barr Harris
+
+```{r}
+tmap::tm_shape(counties) +
+  tmap::tm_borders(col = "black") +
+  tmap::tm_shape(presinctsMapData) +
+  tmap::tm_polygons(
+    col = "BarrHarrisDiff",
+    palette = "PRGn",
+    midpoint = 0,
+    style = "cont",
+    title = "",
+    id = "Precinct_S",
+    popup.vars = c(
+      "Barr: " = "Barr2024Percent",
+      "Harris: " = "Harris2024Percent",
+      "Difference: " = "BarrHarrisDiffLabel"
+    ),
+    popup.format = list(
+      Barr2024Percent = list(digits = 0, suffix = "%"),  # Barr
+      Harris2024Percent = list(digits = 0, suffix = "%"),  # Bergman
+      BarrHarrisDiffLabel = list(digits = 0)                 # Difference (no %)
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = FALSE)
+```
+
+## 2024 Barr 2022 Lorinser
+```{r}
+tmap::tm_shape(counties) +
+  tmap::tm_borders(col = "black") +
+  tmap::tm_shape(presinctsMapData) +
+  tmap::tm_polygons(
+    col = "BarrLorinserDiff",
+    palette = "PRGn",
+    midpoint = 0,
+    style = "cont",
+    title = "",
+    id = "Label",
+    popup.vars = c(
+      "Barr: " = "Barr2024Percent",
+      "Lorinser: " = "Lorinser22Percent",
+      "Difference: " = "BarrLorinserDiffLabel"
+    ),
+    popup.format = list(
+      Barr2024Percent = list(digits = 0, suffix = "%"),  # Barr
+      Lorinser22Percent = list(digits = 0, suffix = "%"),  # Bergman
+      BarrLorinserDiffLabel = list(digits = 0)                 # Difference (no %)
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = FALSE)
+```
+
+:::
+
+# Education
+
+::: {.panel-tabset}
+
+## Percent of School District Federal Funded
+
+```{r}
+educationData$prcntFdLabel <- paste0(round(educationData$prcntFd, 1),"%")
+educationData$pWFU18BLabel <- paste0(round(educationData$pWFU18B, 1),"%")
+
+educationData %>% 
+  dplyr::mutate(prcntFdLabel = ifelse(prcntFdLabel == "NA%", NA,prcntFdLabel),
+                pWFU18BLabel = ifelse(pWFU18BLabel == "NA%", NA,pWFU18BLabel)) -> educationData
+
+tmap::tm_shape(educationData) +
+  tmap::tm_polygons(
+    col = "prcntFdLabel",
+    palette = "PRGn",
+    style = "cat",
+    title = "",
+    id = "Name",
+    colorNA = "grey",
+    textNA = "No data",
+    popup.vars = c(
+      "Enrollment: " = "Enrllmn",
+      "Federal Percent: " = "prcntFd",
+      "Families with Students Below Poverty: " = "pWFU18B"
+    ),
+    popup.format = list(
+      Enrllmn = list(digits = 0,big.mark = ","),
+      prcntFd = list(digits = 0, suffix = "%"),
+      pWFU18B = list(digits = 0, suffix = "%")               
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = TRUE,projection = st_crs(educationData)$epsg)
+```
+
+## School Districts Total Enrollment
+
+```{r}
+tmap::tm_shape(educationData) +
+  tmap::tm_polygons(
+    col = "Enrllmn",
+    palette = "PRGn",
+    style = "cont",
+    title = "",
+    id = "Name",
+    colorNA = "grey",
+    textNA = "No data",
+    popup.vars = c(
+      "Enrollment: " = "Enrllmn",
+      "Federal Percent: " = "prcntFd",
+      "Families with Students Below Poverty: " = "pWFU18B"
+    ),
+    popup.format = list(
+      Enrllmn = list(digits = 0,big.mark = ","),
+      prcntFd = list(digits = 0, suffix = "%"),
+      pWFU18B = list(digits = 0, suffix = "%")               
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = TRUE,projection = st_crs(educationData)$epsg)
+```
+
+## Families with Children Below Poverty Line
+
+```{r}
+tmap::tm_shape(educationData) +
+  tmap::tm_polygons(
+    col = "pWFU18BLabel",
+    palette = "PRGn",
+    style = "cat",
+    title = "",
+    id = "Name",
+    colorNA = "grey",
+    textNA = "No data",
+    popup.vars = c(
+      "Enrollment: " = "Enrllmn",
+      "Federal Percent: " = "prcntFd",
+      "Families with Students Below Poverty: " = "pWFU18B"
+    ),
+    popup.format = list(
+      Enrllmn = list(digits = 0,big.mark = ","),
+      prcntFd = list(digits = 0, suffix = "%"),
+      pWFU18B = list(digits = 0, suffix = "%")               
+    )
+  ) +
+  tmap::tm_layout(bg.color = "white") +
+  tmap::tmap_mode("view") +
+  tmap::tmap_options(basemaps = NULL, check.and.fix = TRUE,projection = st_crs(educationData)$epsg)
+```
+
+
+:::
+
+# Jobs in County
+
+::: {.panel-tabset}
+
+## Sectors by Number of Employees
+
+```{r}
+grand_traverse_top5 <- numEmployees %>%
+  filter(CountyCode == countyFIPS) %>%
+  slice_max(percent, n = 10) %>%
+  mutate(region = county)
+
+michigan_avg <- numEmployees %>%
+  filter(NAME == "District 1 Total") %>%
+  inner_join(grand_traverse_top5 %>% select(name), by = "name") %>%
+  mutate(region = "District 1 Average")
+
+combined_data <- bind_rows(grand_traverse_top5, michigan_avg) %>%
+  mutate(name = factor(name, levels = grand_traverse_top5$name[order(-grand_traverse_top5$percent)]))
+
+ggplot(combined_data, aes(x = percent, y = reorder(name, percent), fill = region)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_text(
+    aes(label = scales::percent(percent, accuracy = 0.1)), 
+    position = position_dodge(width = 0.8),
+    hjust = -0.1,  # Positions numbers at end of bars
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_x_continuous(
+    labels = scales::percent_format(accuracy = 0.1),
+    expand = expansion(mult = c(0, 0.15))  # Add space for numbers
+  ) +
+  scale_fill_manual(values = setNames(c("#1f78b4", "#a6cee3"), c(county, "District 1 Average"))) +
+  labs(
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 10),  # Industry names on y-axis
+    axis.text.x = element_blank(),  # Hide x-axis labels
+    axis.ticks.x = element_blank(),  # Hide x-axis ticks
+    panel.grid.major.x = element_blank(),  # Hide vertical grid lines
+    panel.grid.minor.x = element_blank(),
+    legend.position = "top"
+  )
+```
+
+## Sectors by Number of Establishments
+
+```{r}
+grand_traverse_top5 <- numEstablishments %>%
+  filter(CountyCode == countyFIPS) %>%
+  slice_max(percent, n = 10) %>%
+  mutate(region = county)
+
+michigan_avg <- numEstablishments %>%
+  filter(NAME == "District 1 Total") %>%
+  inner_join(grand_traverse_top5 %>% select(name), by = "name") %>%
+  mutate(region = "District 1 Average")
+
+combined_data <- bind_rows(grand_traverse_top5, michigan_avg) %>%
+  mutate(name = factor(name, levels = grand_traverse_top5$name[order(-grand_traverse_top5$percent)]))
+
+ggplot(combined_data, aes(x = percent, y = reorder(name, percent), fill = region)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_text(
+    aes(label = scales::percent(percent, accuracy = 0.1)), 
+    position = position_dodge(width = 0.8),
+    hjust = -0.1,  # Positions numbers at end of bars
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_x_continuous(
+    labels = scales::percent_format(accuracy = 0.1),
+    expand = expansion(mult = c(0, 0.15))  # Add space for numbers
+  ) +
+  scale_fill_manual(values = setNames(c("#1f78b4", "#a6cee3"), c(county, "District 1 Average"))) +
+  labs(
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 10),  # Industry names on y-axis
+    axis.text.x = element_blank(),  # Hide x-axis labels
+    axis.ticks.x = element_blank(),  # Hide x-axis ticks
+    panel.grid.major.x = element_blank(),  # Hide vertical grid lines
+    panel.grid.minor.x = element_blank(),
+    legend.position = "top"
+  )
+```
+
+## Sectors by Total Payroll
+
+```{r}
+grand_traverse_top5 <- payRoll %>%
+  filter(CountyCode == countyFIPS) %>%
+  slice_max(percent, n = 10) %>%
+  mutate(region = county)
+
+michigan_avg <- payRoll %>%
+  filter(NAME == "District 1 Total") %>%
+  inner_join(grand_traverse_top5 %>% select(name), by = "name") %>%
+  mutate(region = "District 1 Average")
+
+combined_data <- bind_rows(grand_traverse_top5, michigan_avg) %>%
+  mutate(name = factor(name, levels = grand_traverse_top5$name[order(-grand_traverse_top5$percent)]))
+
+ggplot(combined_data, aes(x = percent, y = reorder(name, percent), fill = region)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_text(
+    aes(label = scales::percent(percent, accuracy = 0.1)), 
+    position = position_dodge(width = 0.8),
+    hjust = -0.1,  # Positions numbers at end of bars
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_x_continuous(
+    labels = scales::percent_format(accuracy = 0.1),
+    expand = expansion(mult = c(0, 0.15))  # Add space for numbers
+  ) +
+  scale_fill_manual(values = setNames(c("#1f78b4", "#a6cee3"), c(county, "District 1 Average"))) +
+  labs(
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 10),  # Industry names on y-axis
+    axis.text.x = element_blank(),  # Hide x-axis labels
+    axis.ticks.x = element_blank(),  # Hide x-axis ticks
+    panel.grid.major.x = element_blank(),  # Hide vertical grid lines
+    panel.grid.minor.x = element_blank(),
+    legend.position = "top"
+  )
+```
+:::
+# Veterans in the County
+
+```{r}
+vaSpend %>% 
+  dplyr::select(TotalExpenditure,VeteranPop,UniquePatients,percentVeteran,District1,Michigan,UnitedStates) %>% 
+  dplyr::mutate(VeteranPop = scales::comma(round(VeteranPop)),
+                UniquePatients = scales::comma(round(UniquePatients)),
+                TotalExpenditure = paste0(scales::comma(round(TotalExpenditure)), "K"),
+                percentVeteran = paste0(round(percentVeteran*100,1),"%"),
+                District1 = paste0(round(District1*100,1),"%"),
+                Michigan = paste0(round(Michigan*100,1),"%"),
+                UnitedStates = paste0(round(UnitedStates*100,1),"%")) %>% 
+  dplyr::rename("Veteran Population" = VeteranPop, "Number of VA Patients" = UniquePatients,
+                "Total VA Spend" = TotalExpenditure,
+                "Percent Veterans: County" = percentVeteran, "Percent Veterans: District 1"=District1,
+                "Percent Veterans: Michigan" = Michigan, "Percent Veteran: US" = UnitedStates) %>% 
+  tidyr::pivot_longer(cols = everything()) %>% 
+  dplyr::rename("Variable" = value) %>% 
+  gt::gt(rowname_col = "name") %>% 
+  gtExtras::gt_theme_538()
+```
+
+```{r}
+vaSpend %>% 
+  dplyr::select(CompensationPension,Construction,EmpolymentEducational, Insurance,MedicalCare) %>% 
+  tidyr::pivot_longer(cols = everything()) %>% 
+  dplyr::mutate(fraction = value/sum(value),
+                ymax = cumsum(fraction),
+                name = case_when(name == "CompensationPension" ~ "Compensation and Pension",
+                                 name == "EmpolymentEducational" ~ "Rehabilitation and Employment",
+                                 name == "Insurance" ~ "Insurance and Indemnities",
+                                 name == "MedicalCare" ~ "Medical Care",
+                                 TRUE ~ name)) -> vaPie
+
+vaPie$ymin <- c(0,head(vaPie$ymax,n=-1))
+
+vaPie$labelPosition <- (vaPie$ymax + vaPie$ymin)/2
+
+vaPie$label <- paste0(round(vaPie$fraction*100),"%")
+
+custom_colors <- c(
+  "#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3"  # Adjust as needed
+)
+
+ggplot2::ggplot(vaPie, ggplot2::aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = name)) +
+  ggplot2::geom_rect(color = "white", linewidth = 0.5) +
+  ggplot2::geom_text(
+    x = 3.5,
+    ggplot2::aes(y = labelPosition, label = label),
+    size = 4,
+    color = "black",
+    family = "mono",
+    fontface = "bold"
+  ) +
+  ggplot2::coord_polar(theta = "y") +
+  ggplot2::xlim(c(2, 4)) +
+  ggplot2::scale_fill_manual(values = custom_colors) +
+  ggplot2::theme_void() +
+  ggplot2::theme(
+    legend.position = "left",
+    legend.title = ggplot2::element_blank(),
+    legend.text = ggplot2::element_text(family = "mono", face = "bold")
+  ) +
+  ggplot2::labs(title = "")
+
+```
+
+# Demographics
+
+```{r}
+ageSex <- ageSex %>%
+  mutate(age_group = factor(age_group,
+                           levels = c("0-4", "5-9", "10-14", "15-19", 
+                                     "20-24", "25-29", "30-34", "35-39",
+                                     "40-44", "45-49", "50-54", "55-59",
+                                     "60-64", "65-69", "70-74", "75-79",
+                                     "80-84", "85+"),
+                           ordered = TRUE))
+
+
+ggplot(ageSex, 
+       aes(x = age_group, y = percent, fill = sex)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  facet_wrap(~NAME, scales = "free_x") +
+  scale_y_continuous(labels = function(x) paste0(abs(x)*100, "%")) +
+  labs(title = " ",
+       x = " ",
+       y = " ",
+       fill = " ") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "bottom")
+```
+
+```{r}
+race %>% 
+  dplyr::mutate(NAME = ifelse(NAME == race$NAME[[1]], county, "District 1")) %>% 
+  dplyr::select(-CountyCode) %>% 
+  tidyr::pivot_wider(id_cols = name, names_from = NAME, values_from = value) %>% 
+  gt::gt(rowname_col = "name") %>% 
+  gt::fmt_percent(columns = c(2,3), decimals = 0) %>% 
+  gtExtras::gt_theme_538()
+```
+
+```{r}
+hispanicLatino %>% 
+  dplyr::mutate(variable = "Hispanic") %>% 
+  dplyr::select(variable,County = percentLatino, "District 1" = districtPercentLatino) %>% 
+  gt::gt(rowname_col = "variable") %>% 
+  gt::fmt_percent(columns = c(2,3), decimals = 0) %>% 
+  gtExtras::gt_theme_538()
+```
+
+```{r}
+householdIncome %>% 
+  dplyr::mutate(NAME = ifelse(NAME == householdIncome$NAME[[1]], county, "District 1")) %>% 
+  dplyr::select(-CountyCode) %>% 
+  tidyr::pivot_wider(id_cols = name, names_from = NAME, values_from = value) %>% 
+  gt::gt(rowname_col = "name") %>% 
+  gt::fmt_integer(columns = c(2), pattern = "{x}%") %>% 
+  gtExtras::gt_theme_538()
+```
+```{r}
+medianIncome %>% 
+  dplyr::mutate(NAME = ifelse(NAME == medianIncome$NAME[[1]], county, "District 1")) %>% 
+  dplyr::mutate(variable = "Median Income") %>% 
+  dplyr::select(variable, County=value,"District 1"=medianIncomeDistrict) %>% 
+  gt::gt(rowname_col = "variable") %>% 
+  gt::fmt_integer(columns = c(2,3), pattern = "${x}") %>% 
+  gtExtras::gt_theme_538()
+```
+
+```{r}
+educationAttainment %>% 
+  dplyr::mutate(NAME = ifelse(NAME == educationAttainment$NAME[[1]], county, "District 1")) %>% 
+  dplyr::select(-CountyCode) %>% 
+  tidyr::pivot_wider(id_cols = name, names_from = NAME, values_from = value) %>% 
+  gt::gt(rowname_col = "name") %>% 
+  gt::fmt_percent(columns = c(2,3), decimals = 0) %>% 
+  gtExtras::gt_theme_538()
+```
+
+```{r}
+bachelorType %>% 
+  dplyr::mutate(NAME = ifelse(NAME == bachelorType$NAME[[1]], county, "District 1")) %>% 
+  dplyr::select(-CountyCode) %>% 
+  tidyr::pivot_wider(id_cols = name, names_from = NAME, values_from = value) %>% 
+  gt::gt(rowname_col = "name") %>% 
+  gt::fmt_percent(columns = c(2,3), decimals = 0) %>% 
+  gtExtras::gt_theme_538()
+```
