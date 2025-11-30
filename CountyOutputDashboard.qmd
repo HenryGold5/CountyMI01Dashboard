@@ -35,10 +35,10 @@ suppressPackageStartupMessages({
 sf::sf_use_s2(FALSE)
 
 # Load all data quietly
-presincts <- suppressMessages(sf::st_read("data/Shapefiles/District1PresinctsWithVoting/district1Presincts.gpkg", quiet = TRUE))
-overall <- suppressMessages(sf::read_sf("data/Shapefiles/District1Overall/district1Overall.shp"))
-metro <- suppressMessages(sf::read_sf("data/Shapefiles/District1Metro/district1Metro.shp"))
-counties_all <- suppressMessages(sf::read_sf("data/Shapefiles/District1Counties/district1Counties.shp"))
+presincts <- suppressMessages(readRDS("data/Shapefiles/district1Presincts_lite.rds"))
+overall <- suppressMessages(readRDS("data/Shapefiles/district1Overall_lite.rds"))
+metro <- suppressMessages(readRDS("data/Shapefiles/district1Metro_lite.rds"))
+counties_all <- suppressMessages(readRDS("data/Shapefiles/district1Counties_lite.rds"))
 countyVotingResults_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/votingResultsCountyWide.xlsx"))
 voterTurnout_all <- suppressMessages(read.csv("data/ExcelFiles/voterTurnout2024.csv"))
 vaSpend_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/spendDataVA.xlsx"))
@@ -52,7 +52,7 @@ householdIncome_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/Count
 medianIncome_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 5))
 hispanicLatino_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 6))
 race_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 7))
-educationData_all <- suppressMessages(sf::read_sf("data/Shapefiles/Education/educationDataset.shp"))
+educationData_all <- suppressMessages(readRDS("data/Shapefiles/educationDataset_lite.rds"))
 
 # Transform to common CRS
 overall <- sf::st_transform(overall, st_crs(presincts))
@@ -98,7 +98,7 @@ voting_barr_harris_limit <- max(abs(voting_barr_harris_limits))
 voting_barr_lorinser_limit <- max(abs(voting_barr_lorinser_limits))
 ```
 
-# {.sidebar}
+#  {.sidebar}
 
 ```{r}
 selectInput("county", "Select County:", 
@@ -120,7 +120,7 @@ output$county_title <- renderText({
 
 # Overview {data-navmenu="County Data"}
 
-## Row {height=40%}
+## Row {height="40%"}
 
 ```{r}
 #| title: County Map
@@ -176,7 +176,7 @@ output$county_map <- renderPlot({
 })
 ```
 
-## Row {height=60%}
+## Row {height="60%"}
 
 ```{r}
 #| title: Voting Results by Office
@@ -979,7 +979,7 @@ output$jobs_payroll <- renderPlot({
 
 # Veterans {data-navmenu="County Data"}
 
-## Row {height=40%}
+## Row {height="40%"}
 
 ### Veteran Statistics
 
@@ -1017,7 +1017,7 @@ output$veteran_stats <- gt::render_gt({
 })
 ```
 
-## Row {height=60%}
+## Row {height="60%"}
 
 ### VA Spending by Category
 
@@ -1079,7 +1079,7 @@ output$veteran_pie <- renderPlot({
 
 # Demographics {data-navmenu="County Data"}
 
-## Row {height=50%}
+## Row {height="50%"}
 
 ### Population Pyramid
 
@@ -1120,7 +1120,7 @@ output$demo_age_sex <- renderPlot({
 })
 ```
 
-## Row {height=50%}
+## Row {height="50%"}
 
 ### Column 1 {.tabset}
 
