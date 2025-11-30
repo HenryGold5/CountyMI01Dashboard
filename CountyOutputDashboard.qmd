@@ -596,29 +596,34 @@ renderTmap({
 ### By Employees
 
 ```{r}
-renderPlot({
+plotOutput("jobs_employees", height = "500px")
+```
+
+```{r}
+#| context: server
+output$jobs_employees <- renderPlot({
   req(input$county)
-  
+
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  
+
   numEmployees <- numEmployees_all %>%
     dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>%
     dplyr::filter(CountyCode == countyFIPS | CountyCode == "999")
-  
+
   grand_traverse_top5 <- numEmployees %>%
     filter(CountyCode == countyFIPS) %>%
     slice_max(percent, n = 10) %>%
     mutate(region = county)
-  
+
   michigan_avg <- numEmployees %>%
     filter(NAME == "District 1 Total") %>%
     inner_join(grand_traverse_top5 %>% select(name), by = "name") %>%
     mutate(region = "District 1 Average")
-  
+
   combined_data <- bind_rows(grand_traverse_top5, michigan_avg) %>%
     mutate(name = factor(name, levels = grand_traverse_top5$name[order(-grand_traverse_top5$percent)]))
-  
+
   ggplot(combined_data, aes(x = percent, y = reorder(name, percent), fill = region)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
     geom_text(
@@ -707,7 +712,12 @@ output$jobs_establishments <- renderPlot({
 ### By Payroll
 
 ```{r}
-renderPlot({
+plotOutput("jobs_payroll", height = "500px")
+```
+
+```{r}
+#| context: server
+output$jobs_payroll <- renderPlot({
   req(input$county)
 
   county <- input$county
@@ -861,7 +871,7 @@ output$veteran_pie <- renderPlot({
 
 ## Row {height=50%}
 
-### Age and Sex Distribution
+### Population Pyramid
 
 ```{r}
 plotOutput("demo_age_sex", height = "400px")
@@ -871,14 +881,14 @@ plotOutput("demo_age_sex", height = "400px")
 #| context: server
 output$demo_age_sex <- renderPlot({
   req(input$county)
-  
+
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  
+
   ageSex <- ageSex_all %>%
     dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>%
     dplyr::filter(CountyCode == countyFIPS | CountyCode == "999")
-  
+
   ageSex <- ageSex %>%
     mutate(age_group = factor(age_group,
                              levels = c("0-4", "5-9", "10-14", "15-19",
@@ -887,7 +897,7 @@ output$demo_age_sex <- renderPlot({
                                        "60-64", "65-69", "70-74", "75-79",
                                        "80-84", "85+"),
                              ordered = TRUE))
-  
+
   ggplot(ageSex, aes(x = age_group, y = percent, fill = sex)) +
     geom_bar(stat = "identity") +
     coord_flip() +
@@ -902,7 +912,9 @@ output$demo_age_sex <- renderPlot({
 
 ## Row {height=50%}
 
-### Race
+### Column 1 {.tabset}
+
+#### Race
 
 ```{r}
 gt::gt_output("demo_race")
@@ -912,14 +924,14 @@ gt::gt_output("demo_race")
 #| context: server
 output$demo_race <- gt::render_gt({
   req(input$county)
-  
+
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  
+
   race <- race_all %>%
     dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>%
     dplyr::filter(CountyCode == countyFIPS | CountyCode == "999")
-  
+
   gt_output <- race %>%
     dplyr::mutate(NAME = ifelse(NAME == race$NAME[[1]], county, "District 1")) %>%
     dplyr::select(-CountyCode) %>%
@@ -930,37 +942,7 @@ output$demo_race <- gt::render_gt({
 })
 ```
 
-### Median Income
-
-```{r}
-gt::gt_output("demo_income")
-```
-
-```{r}
-#| context: server
-output$demo_income <- gt::render_gt({
-  req(input$county)
-  
-  county <- input$county
-  countyFIPS <- county_fips$fips[county_fips$county == county]
-  
-  medianIncome <- medianIncome_all %>%
-    dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>%
-    dplyr::filter(CountyCode == countyFIPS | CountyCode == "999")
-  
-  gt_output <- medianIncome %>%
-    dplyr::mutate(NAME = ifelse(NAME == medianIncome$NAME[[1]], county, "District 1")) %>%
-    dplyr::mutate(variable = "Median Income") %>%
-    dplyr::select(variable, County=value,"District 1"=medianIncomeDistrict) %>%
-    gt::gt(rowname_col = "variable") %>%
-    gt::fmt_integer(columns = c(2,3), pattern = "${x}") %>%
-    gtExtras::gt_theme_538()
-})
-```
-
-## Row {height=50%}
-
-### Hispanic/Latino
+#### Hispanic/Latino
 
 ```{r}
 gt::gt_output("demo_hispanic")
@@ -987,7 +969,7 @@ output$demo_hispanic <- gt::render_gt({
 })
 ```
 
-### Household Income
+#### Household Income
 
 ```{r}
 gt::gt_output("demo_household_income")
@@ -1015,9 +997,37 @@ output$demo_household_income <- gt::render_gt({
 })
 ```
 
-## Row {height=50%}
+### Column 2 {.tabset}
 
-### Education Attainment
+#### Median Income
+
+```{r}
+gt::gt_output("demo_income")
+```
+
+```{r}
+#| context: server
+output$demo_income <- gt::render_gt({
+  req(input$county)
+
+  county <- input$county
+  countyFIPS <- county_fips$fips[county_fips$county == county]
+
+  medianIncome <- medianIncome_all %>%
+    dplyr::mutate(CountyCode = as.numeric(CountyCode)) %>%
+    dplyr::filter(CountyCode == countyFIPS | CountyCode == "999")
+
+  gt_output <- medianIncome %>%
+    dplyr::mutate(NAME = ifelse(NAME == medianIncome$NAME[[1]], county, "District 1")) %>%
+    dplyr::mutate(variable = "Median Income") %>%
+    dplyr::select(variable, County=value,"District 1"=medianIncomeDistrict) %>%
+    gt::gt(rowname_col = "variable") %>%
+    gt::fmt_integer(columns = c(2,3), pattern = "${x}") %>%
+    gtExtras::gt_theme_538()
+})
+```
+
+#### Education Attainment
 
 ```{r}
 gt::gt_output("demo_education")
@@ -1045,7 +1055,7 @@ output$demo_education <- gt::render_gt({
 })
 ```
 
-### Bachelor Degree Types
+#### Bachelor Degree Types
 
 ```{r}
 gt::gt_output("demo_bachelor")
