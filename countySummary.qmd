@@ -22,32 +22,32 @@ library(stringr)
 library(ggplot2)
 library(scales)
 
-sf::st_read("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1PresinctsWithVoting/district1Presincts.gpkg") -> presincts
-sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Overall/district1Overall.shp") -> overall
+sf::st_read("data/Shapefiles/District1PresinctsWithVoting/district1Presincts.gpkg") -> presincts
+sf::read_sf("data/Shapefiles/District1Overall/district1Overall.shp") -> overall
 sf::st_transform(overall,st_crs(presincts)) -> overall
-sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Metro/district1Metro.shp") -> metro
+sf::read_sf("data/Shapefiles/District1Metro/district1Metro.shp") -> metro
 sf::st_transform(metro,sf::st_crs(presincts)) -> metro
-sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/District1Counties/district1Counties.shp") -> counties
+sf::read_sf("data/Shapefiles/District1Counties/district1Counties.shp") -> counties
 sf::st_transform(counties, sf::st_crs(presincts)) -> counties
 
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/VotingInDistrict1/votingResultsCountyWide.xlsx") -> countyVotingResults
-read.csv("~/Desktop/CallieBarrCampaignWork/VotingInDistrict1/voterTurnout2024.csv") -> voterTurnout
+readxl::read_xlsx("data/ExcelFiles/votingResultsCountyWide.xlsx") -> countyVotingResults
+read.csv("data/ExcelFiles/voterTurnout2024.csv") -> voterTurnout
 
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/VeteransAssociation/spendDataVA.xlsx") -> vaSpend
+readxl::read_xlsx("data/ExcelFiles/spendDataVA.xlsx") -> vaSpend
 
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/numEmployeesCounty.xlsx") -> numEmployees
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/numEstablishmentsCounty.xlsx") -> numEstablishments
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/JobsData/payRollCounty.xlsx") -> payRoll
+readxl::read_xlsx("data/ExcelFiles/numEmployeesCounty.xlsx") -> numEmployees
+readxl::read_xlsx("data/ExcelFiles/numEstablishmentsCounty.xlsx") -> numEstablishments
+readxl::read_xlsx("data/ExcelFiles/payRollCounty.xlsx") -> payRoll
 
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 1) -> ageSex
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 2) -> bachelorType
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 3) -> educationAttainment
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 4) -> householdIncome
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 5) -> medianIncome
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 6) -> hispanicLatino
-readxl::read_xlsx("~/Desktop/CallieBarrCampaignWork/CountyDemographics.xlsx", sheet = 7) -> race
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 1) -> ageSex
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 2) -> bachelorType
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 3) -> educationAttainment
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 4) -> householdIncome
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 5) -> medianIncome
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 6) -> hispanicLatino
+readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 7) -> race
 
-sf::read_sf("~/Desktop/CallieBarrCampaignWork/Shapefiles/educationDataset.shp") -> educationData
+sf::read_sf("data/Shapefiles/Education/educationDataset.shp") -> educationData
 
 county <- "Grand Traverse"
 countyFIPS <- 55
