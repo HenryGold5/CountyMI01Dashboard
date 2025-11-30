@@ -1,0 +1,23 @@
+# Quarto
+/.quarto/
+_site/
+*.html
+.Rproj.user
+
+# R
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Credentials (keep secure!)
+credentials.R
+.htpasswd
