@@ -33,19 +33,39 @@ quarto serve CountyOutputDashboard.qmd
 ## Deployment
 
 ### Static Website
-The static website (landing page) can be deployed to GitHub Pages via GitHub Actions.
+The static website (landing page) is automatically deployed to GitHub Pages via GitHub Actions.
 
 ### Shiny Dashboard
-The Shiny dashboard requires a server to run and cannot be deployed as static content. Options:
-- **shinyapps.io**: Deploy to Posit's cloud service
-- **Shiny Server**: Self-hosted server
-- **Posit Connect**: Enterprise deployment
+The Shiny dashboard is automatically deployed to **Posit Connect Cloud** via GitHub Actions when changes are pushed to the main branch.
 
-To deploy to shinyapps.io:
+#### Manual Deployment to Posit Connect Cloud
+To deploy manually:
 ```r
 library(rsconnect)
-rsconnect::deployApp(appFiles = "CountyOutputDashboard.qmd")
+
+# Configure Posit Connect Cloud
+rsconnect::addConnectServer(
+  url = "https://connect.posit.cloud/",
+  name = "posit-connect-cloud"
+)
+
+rsconnect::connectApiUser(
+  account = "henrygold5",
+  server = "posit-connect-cloud",
+  apiKey = "YOUR_API_KEY"
+)
+
+# Deploy the app
+rsconnect::deployApp(
+  appFiles = "CountyOutputDashboard.qmd",
+  server = "posit-connect-cloud"
+)
 ```
+
+#### Required GitHub Secrets
+For automated deployment, configure these secrets in your GitHub repository:
+- `POSIT_CONNECT_URL`: Your Posit Connect Cloud URL (e.g., `https://connect.posit.cloud/`)
+- `POSIT_CONNECT_API_KEY`: Your Posit Connect Cloud API key
 
 ## Live Site
 

@@ -1,4 +1,4 @@
-name: Deploy Shiny App to shinyapps.io
+name: Deploy Shiny App to Posit Connect Cloud
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   deploy-shiny:
-    name: Deploy to shinyapps.io
+    name: Deploy to Posit Connect Cloud
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -65,13 +65,17 @@ jobs:
                            "bslib", "tidyr", "readxl", "quarto"))
         shell: Rscript {0}
 
-      - name: Configure rsconnect
+      - name: Configure rsconnect for Posit Connect Cloud
         run: |
           Rscript -e "
-          rsconnect::setAccountInfo(
-            name = 'henrygold5',
-            token = '${{ secrets.TOKEN }}',
-            secret = '${{ secrets.SECRET }}'
+          rsconnect::addConnectServer(
+            url = '${{ secrets.POSIT_CONNECT_URL }}',
+            name = 'posit-connect-cloud'
+          )
+          rsconnect::connectApiUser(
+            account = 'henrygold5',
+            server = 'posit-connect-cloud',
+            apiKey = '${{ secrets.POSIT_CONNECT_API_KEY }}'
           )
           "
 
@@ -82,13 +86,14 @@ jobs:
           quarto_serve("CountyOutputDashboard.qmd")
           EOF
 
-      - name: Deploy to shinyapps.io
+      - name: Deploy to Posit Connect Cloud
         run: |
           Rscript -e "
           rsconnect::deployApp(
             appDir = '.',
             appFiles = c('app.R', 'CountyOutputDashboard.qmd', 'data'),
             appName = 'district1-county-dashboard',
+            server = 'posit-connect-cloud',
             account = 'henrygold5',
             forceUpdate = TRUE
           )
