@@ -34,25 +34,27 @@ suppressPackageStartupMessages({
 # Suppress all sf messages
 sf::sf_use_s2(FALSE)
 
-# Load all data quietly
+# Load all data quietly - using RDS files for fast loading
 presincts <- suppressMessages(readRDS("data/Shapefiles/district1Presincts_lite.rds"))
 overall <- suppressMessages(readRDS("data/Shapefiles/district1Overall_lite.rds"))
 metro <- suppressMessages(readRDS("data/Shapefiles/district1Metro_lite.rds"))
 counties_all <- suppressMessages(readRDS("data/Shapefiles/district1Counties_lite.rds"))
-countyVotingResults_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/votingResultsCountyWide.xlsx"))
-voterTurnout_all <- suppressMessages(read.csv("data/ExcelFiles/voterTurnout2024.csv"))
-vaSpend_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/spendDataVA.xlsx"))
-numEmployees_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/numEmployeesCounty.xlsx"))
-numEstablishments_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/numEstablishmentsCounty.xlsx"))
-payRoll_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/payRollCounty.xlsx"))
-ageSex_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 1))
-bachelorType_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 2))
-educationAttainment_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 3))
-householdIncome_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 4))
-medianIncome_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 5))
-hispanicLatino_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 6))
-race_all <- suppressMessages(readxl::read_xlsx("data/ExcelFiles/CountyDemographics.xlsx", sheet = 7))
 educationData_all <- suppressMessages(readRDS("data/Shapefiles/educationDataset_lite.rds"))
+
+# Load Excel data from RDS files (much faster than reading Excel directly)
+countyVotingResults_all <- suppressMessages(readRDS("data/ExcelFiles/votingResultsCountyWide.rds"))
+voterTurnout_all <- suppressMessages(readRDS("data/ExcelFiles/voterTurnout2024.rds"))
+vaSpend_all <- suppressMessages(readRDS("data/ExcelFiles/spendDataVA.rds"))
+numEmployees_all <- suppressMessages(readRDS("data/ExcelFiles/numEmployeesCounty.rds"))
+numEstablishments_all <- suppressMessages(readRDS("data/ExcelFiles/numEstablishmentsCounty.rds"))
+payRoll_all <- suppressMessages(readRDS("data/ExcelFiles/payRollCounty.rds"))
+ageSex_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_ageSex.rds"))
+bachelorType_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_bachelorType.rds"))
+educationAttainment_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_educationAttainment.rds"))
+householdIncome_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_householdIncome.rds"))
+medianIncome_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_medianIncome.rds"))
+hispanicLatino_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_hispanicLatino.rds"))
+race_all <- suppressMessages(readRDS("data/ExcelFiles/CountyDemographics_race.rds"))
 
 # Transform to common CRS
 overall <- sf::st_transform(overall, st_crs(presincts))
@@ -112,6 +114,52 @@ h3(textOutput("county_title"), style = "color: #2c3e50; font-weight: bold;")
 
 ```{r}
 #| context: server
+
+# Reactive expression to cache filtered and computed precinct data
+# This runs ONCE per county change instead of 6+ times (once for each map)
+presincts_filtered_cached <- reactive({
+  req(input$county)
+
+  county <- input$county
+  counties <- counties_all %>% dplyr::filter(Name == county)
+
+  # Filter precincts for this county
+  presincts_filtered <- if(county != "Wexford") {
+    sf::st_intersection(presincts, counties) %>%
+      sf::st_make_valid() %>%
+      sf::st_cast("MULTIPOLYGON")
+  } else {
+    sf::st_crop(presincts, counties)
+  }
+
+  # Pre-compute ALL percentages and differences ONCE
+  presincts_filtered %>%
+    dplyr::mutate(
+      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+      Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
+      Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
+      Harris2024Percent = (Harris2024/TotalPres2024)*100,
+      Lorinser22Percent = (Lorinser22/(Lorinser22 + Bergman22 + Gale22 + Hakola22))*100,
+      BarrBergmanDiff = Barr2024Percent - Bergman2024Percent,
+      BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
+      BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
+      BarrLorinserDiff = Barr2024Percent - Lorinser22Percent,
+      # Pre-compute labels
+      BarrBergmanDiffLabel = ifelse(BarrBergmanDiff >= 0,
+                                     paste0("+", round(BarrBergmanDiff, 0)),
+                                     as.character(round(BarrBergmanDiff, 0))),
+      BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
+                                     paste0("+", round(BarrSlotkinDiff, 0)),
+                                     as.character(round(BarrSlotkinDiff, 0))),
+      BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
+                                     paste0("+", round(BarrHarrisDiff, 0)),
+                                     as.character(round(BarrHarrisDiff, 0))),
+      BarrLorinserDiffLabel = ifelse(BarrLorinserDiff >= 0,
+                                     paste0("+", round(BarrLorinserDiff, 0)),
+                                     as.character(round(BarrLorinserDiff, 0)))
+    )
+})
+
 output$county_title <- renderText({
   req(input$county)
   paste(input$county, "County")
@@ -231,31 +279,10 @@ tmapOutput("map_barr_bergman")
 #| context: server
 output$map_barr_bergman <- renderTmap({
   req(input$county)
-  
-  county <- input$county
-  countyFIPS <- county_fips$fips[county_fips$county == county]
-  counties <- counties_all %>% dplyr::filter(Name == county)
-  
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-  
-  presinctsMapData <- presincts_filtered %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      BarrBergmanDiff = Barr2024Percent - Bergman2024Percent,
-      BarrBergmanDiffLabel = ifelse(BarrBergmanDiff >= 0,
-                                     paste0("+", round(BarrBergmanDiff, 0)),
-                                     as.character(round(BarrBergmanDiff, 0)))
-    )
-  
-  presinctsMapData <- st_make_valid(presinctsMapData)
-  counties <- st_make_valid(counties)
+
+  # Use cached data - no recalculation needed!
+  presinctsMapData <- presincts_filtered_cached()
+  counties <- counties_all %>% dplyr::filter(Name == input$county) %>% st_make_valid()
   
   tmap::tm_shape(counties) +
     tmap::tm_borders(col = "black") +
@@ -293,30 +320,10 @@ tmapOutput("map_barr_slotkin")
 #| context: server
 output$map_barr_slotkin <- renderTmap({
   req(input$county)
-  
-  county <- input$county
-  counties <- counties_all %>% dplyr::filter(Name == county)
-  
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-  
-  presinctsMapData <- presincts_filtered %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
-      BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
-      BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
-                                     paste0("+", round(BarrSlotkinDiff, 0)),
-                                     as.character(round(BarrSlotkinDiff, 0)))
-    )
-  
-  presinctsMapData <- st_make_valid(presinctsMapData)
-  counties <- st_make_valid(counties)
+
+  # Use cached data - no recalculation needed!
+  presinctsMapData <- presincts_filtered_cached()
+  counties <- counties_all %>% dplyr::filter(Name == input$county) %>% st_make_valid()
   
   tmap::tm_shape(counties) +
     tmap::tm_borders(col = "black") +
@@ -355,29 +362,9 @@ tmapOutput("map_barr_harris")
 output$map_barr_harris <- renderTmap({
   req(input$county)
 
-  county <- input$county
-  counties <- counties_all %>% dplyr::filter(Name == county)
-
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-
-  presinctsMapData <- presincts_filtered %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Harris2024Percent = (Harris2024/TotalPres2024)*100,
-      BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
-      BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
-                                     paste0("+", round(BarrHarrisDiff, 0)),
-                                     as.character(round(BarrHarrisDiff, 0)))
-    )
-
-  presinctsMapData <- st_make_valid(presinctsMapData)
-  counties <- st_make_valid(counties)
+  # Use cached data - no recalculation needed!
+  presinctsMapData <- presincts_filtered_cached()
+  counties <- counties_all %>% dplyr::filter(Name == input$county) %>% st_make_valid()
 
   tmap::tm_shape(counties) +
     tmap::tm_borders(col = "black") +
@@ -416,29 +403,9 @@ tmapOutput("map_barr_lorinser")
 output$map_barr_lorinser <- renderTmap({
   req(input$county)
 
-  county <- input$county
-  counties <- counties_all %>% dplyr::filter(Name == county)
-
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-
-  presinctsMapData <- presincts_filtered %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Lorinser22Percent = (Lorinser22/(Lorinser22 + Bergman22 + Gale22 + Hakola22))*100,
-      BarrLorinserDiff = Barr2024Percent - Lorinser22Percent,
-      BarrLorinserDiffLabel = ifelse(BarrLorinserDiff >= 0,
-                                     paste0("+", round(BarrLorinserDiff, 0)),
-                                     as.character(round(BarrLorinserDiff, 0)))
-    )
-
-  presinctsMapData <- st_make_valid(presinctsMapData)
-  counties <- st_make_valid(counties)
+  # Use cached data - no recalculation needed!
+  presinctsMapData <- presincts_filtered_cached()
+  counties <- counties_all %>% dplyr::filter(Name == input$county) %>% st_make_valid()
 
   tmap::tm_shape(counties) +
     tmap::tm_borders(col = "black") +
@@ -479,26 +446,10 @@ output$map_cartogram <- renderTmap({
 
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  counties <- counties_all %>% dplyr::filter(Name == county)
 
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-
-  presinctsCartogram <- presincts_filtered %>%
-    dplyr::filter(COUNTYFIPS == countyFIPS) %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Bergman2024Percent = (Bergman2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      BarrBergmanDiff = Barr2024Percent - Bergman2024Percent,
-      BarrBergmanDiffLabel = ifelse(BarrBergmanDiff >= 0,
-                                     paste0("+", round(BarrBergmanDiff, 0)),
-                                     as.character(round(BarrBergmanDiff, 0)))
-    )
+  # Use cached data and filter by county FIPS
+  presinctsCartogram <- presincts_filtered_cached() %>%
+    dplyr::filter(COUNTYFIPS == countyFIPS)
 
   presinctsCartogram <- st_transform(presinctsCartogram, 3857)
   presinctsCartogram <- st_make_valid(presinctsCartogram)
@@ -542,26 +493,10 @@ output$map_cartogram_slotkin <- renderTmap({
 
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  counties <- counties_all %>% dplyr::filter(Name == county)
 
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-
-  presinctsCartogram <- presincts_filtered %>%
-    dplyr::filter(COUNTYFIPS == countyFIPS) %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Slotkin2024Percent = (Slotkin2024/TotalSen2024)*100,
-      BarrSlotkinDiff = Barr2024Percent - Slotkin2024Percent,
-      BarrSlotkinDiffLabel = ifelse(BarrSlotkinDiff >= 0,
-                                     paste0("+", round(BarrSlotkinDiff, 0)),
-                                     as.character(round(BarrSlotkinDiff, 0)))
-    )
+  # Use cached data and filter by county FIPS
+  presinctsCartogram <- presincts_filtered_cached() %>%
+    dplyr::filter(COUNTYFIPS == countyFIPS)
 
   presinctsCartogram <- st_transform(presinctsCartogram, 3857)
   presinctsCartogram <- st_make_valid(presinctsCartogram)
@@ -605,26 +540,10 @@ output$map_cartogram_harris <- renderTmap({
 
   county <- input$county
   countyFIPS <- county_fips$fips[county_fips$county == county]
-  counties <- counties_all %>% dplyr::filter(Name == county)
 
-  presincts_filtered <- if(county != "Wexford") {
-    sf::st_intersection(presincts, counties) %>%
-      sf::st_make_valid() %>%
-      sf::st_cast("MULTIPOLYGON")
-  } else {
-    sf::st_crop(presincts, counties)
-  }
-
-  presinctsCartogram <- presincts_filtered %>%
-    dplyr::filter(COUNTYFIPS == countyFIPS) %>%
-    dplyr::mutate(
-      Barr2024Percent = (Barr2024/(Barr2024 + Bergman2024 + Gale2024 + Hakola2024))*100,
-      Harris2024Percent = (Harris2024/TotalPres2024)*100,
-      BarrHarrisDiff = Barr2024Percent - Harris2024Percent,
-      BarrHarrisDiffLabel = ifelse(BarrHarrisDiff >= 0,
-                                     paste0("+", round(BarrHarrisDiff, 0)),
-                                     as.character(round(BarrHarrisDiff, 0)))
-    )
+  # Use cached data and filter by county FIPS
+  presinctsCartogram <- presincts_filtered_cached() %>%
+    dplyr::filter(COUNTYFIPS == countyFIPS)
 
   presinctsCartogram <- st_transform(presinctsCartogram, 3857)
   presinctsCartogram <- st_make_valid(presinctsCartogram)
