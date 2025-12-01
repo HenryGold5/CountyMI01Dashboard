@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "locale": "en_US.UTF-8",
+  "metadata": {
+    "appmode": "quarto-shiny",
+    "entrypoint": "CountyOutputDashboard.qmd"
+  },
+  "packages": {
+    "R": {
+      "version": "4.3.0",
+      "repositories": [
+        {
+          "Name": "CRAN",
+          "URL": "https://packagemanager.posit.co/cran/latest"
+        }
+      ]
+    },
+    "packages": {
+      "shiny": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "dplyr": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "tmap": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "sf": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "cartogram": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "gt": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "gtExtras": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "stringr": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "ggplot2": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "scales": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "bslib": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "tidyr": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "readxl": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "rmapshaper": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "readr": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "rmarkdown": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "knitr": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      },
+      "quarto": {
+        "Source": "CRAN",
+        "Repository": "https://packagemanager.posit.co/cran/latest"
+      }
+    }
+  },
+  "files": {
+    "CountyOutputDashboard.qmd": {
+      "checksum": ""
+    },
+    "_quarto.yml": {
+      "checksum": ""
+    }
+  },
+  "users": null
+}
